@@ -1,0 +1,204 @@
+/******************************************************************************
+FORMULA NAME: XXX_OTL_CLOSURE_VALIDATIONS_FF
+FORMULA TYPE: Time Entry Rules
+*******************************************************************************/
+DEFAULT FOR HWM_CTXARY_RECORD_POSITIONS     is  EMPTY_TEXT_NUMBER  
+DEFAULT FOR HWM_CTXARY_HWM_MEASURE_DAY      is  EMPTY_NUMBER_NUMBER 
+DEFAULT FOR measure           is  EMPTY_NUMBER_NUMBER 
+DEFAULT FOR PayrollTimeType   is  EMPTY_TEXT_NUMBER
+DEFAULT FOR StartTime         is  EMPTY_DATE_NUMBER
+DEFAULT FOR StopTime         is  EMPTY_DATE_NUMBER
+DEFAULT FOR PER_ASG_ATTRIBUTE1 is 'XX'
+ 
+INPUTS ARE
+  HWM_CTXARY_RECORD_POSITIONS,
+  HWM_CTXARY_HWM_MEASURE_DAY,
+  measure, 
+  StartTime,
+  StopTime,
+  PayrollTimeType
+
+ffName = 'XXX_TL_CLOSURE_VALIDATIONS_FF'
+ffs_id = GET_CONTEXT(HWM_FFS_ID, 0) 
+rule_id = GET_CONTEXT(HWM_RULE_ID, 0) 
+rLog  = add_rlog (ffs_id, rule_id, ffName)
+   
+   
+/* Fixed Values from Rule header  */
+ hSumLvl= Get_Hdr_Text(rule_id, 'RUN_SUMMATION_LEVEL', 'TIMECARD') 
+ hExecType  = Get_Hdr_Text(rule_id,'RULE_EXEC_TYPE', 'CREATE')  
+ 
+ hCreateYn  = 'N' 
+ if (upper(hExecType) = 'CREATE'  ) then ( 
+   hCreateYn  = 'Y' 
+ ) 
+   
+ rLog = add_rlog (ffs_id , rule_id ,'Rule Header:'  ||  
+ ' , ffs_id ='  ||  TO_CHAR( ffs_id ) ||   
+ ' , rule_id ='  ||  TO_CHAR( rule_id ) ||   
+ ' , hSumLvl='  ||   hSumLvl ||    
+ ' , hExecType='  ||   hExecType ||      
+ ' , hCreateYn='  ||   hCreateYn   )
+ 
+NullDate =  '01-JAN-1900'(DATE)
+NullText =  '**FF_NULL**'
+ 
+sumLvlTimeCard = 'TIMECARD'
+sumLvlDay = 'DAY'
+sumLvlDetail  = 'DETAIL'
+
+RecPositoinEoPeriod = 'END_PERIOD' 
+RecPositoinEoDay = 'END_DAY' 
+RecPositoinDetail = 'DETAIL'
+
+ctx_personId = GET_CONTEXT(HWM_RESOURCE_ID, 0)
+ctx_subResource = GET_CONTEXT(HWM_SUBRESOURCE_ID, 0)
+ctx_start_date = GET_CONTEXT(HWM_CTX_SEARCH_START_DATE,  NullDate)
+ctx_end_date = GET_CONTEXT(HWM_CTX_SEARCH_END_DATE, NullDate) 
+    
+ l_status = add_rlog (ffs_id , rule_id ,  '(UTIL_ ...context : '  ||  
+ ' , ctx_personId ='  ||  TO_CHAR( ctx_personId ) || 
+ ' , ctx_subResource ='  ||  TO_CHAR( ctx_subResource ) || 
+ ' , ctx_start_date ='  ||  TO_CHAR( ctx_start_date ) ||  
+ ' , ctx_end_date ='  ||  TO_CHAR( ctx_end_date ) ||  
+ ' ) ' )
+
+l_date = ctx_start_date
+l_valid = 'N'
+
+/* Fixed Values from Rule header  */
+hSumLvl= Get_Hdr_Text(rule_id, 'RUN_SUMMATION_LEVEL', 'TIMECARD') 
+exec_type  = Get_Hdr_Text(rule_id,'RULE_EXEC_TYPE', 'CREATE') 
+pMsg = get_rvalue_text (rule_id  ,'OVRD_MSG_CODE', 'HWM_FF_TER_EMP_HOL_WRN')
+categoryId  = get_rvalue_number (rule_id ,'WORKED_TIME_CONDITION', 0)
+
+ rLog = add_rlog (ffs_id, rule_id, 'Input_parameters:'  ||
+				'; category='  || TO_CHAR( categoryId )   )
+
+CHANGE_CONTEXTS(EFFECTIVE_DATE = ctx_end_date, HR_ASSIGNMENT_ID = ctx_subResource)
+(
+l_essential_flag = PER_ASG_ATTRIBUTE1
+)
+rLog  = add_rlog (ffs_id, rule_id, ' >>> Start bulk process - l_essential_flag=' || l_essential_flag  )
+
+wk_hrs_total_day  = 0
+wk_hrs_total_tc   = 0
+
+ max_loop = 500
+ max_ary = HWM_CTXARY_RECORD_POSITIONS.count  
+ rLog  = add_rlog (ffs_id, rule_id, ' >>> Start bulk process - max_ary=' || TO_CHAR( max_ary )  )
+
+OUT_WRN_MSG_ESS = EMPTY_TEXT_NUMBER
+OUT_WRN_MSG_NON_ESS = EMPTY_TEXT_NUMBER
+nidx = 0
+
+WHILE (nidx < max_ary ) LOOP
+(
+    nidx = nidx + 1
+
+	tcRecPos = NullText
+	tcMeasure = 0
+	tcPayrolltimetype = NullText
+
+	tcRecPos   = HWM_CTXARY_RECORD_POSITIONS[nidx]
+
+	if (MEASURE.exists(nidx) ) then 
+	( 
+	tcMeasure  = MEASURE[nidx]
+	)
+
+	if (PAYROLLTIMETYPE.exists(nidx) ) then ( tcPayrolltimetype  = PAYROLLTIMETYPE[nidx]   )
+	
+	 rLog = add_rlog (ffs_id, rule_id, 'Tc_Inputs #: '  ||    TO_CHAR( nidx )  ||
+								'; rec_pos='  || tcRecPos    ||
+								'; measure='  ||  TO_CHAR( tcMeasure ) ||  
+								'; payrolltimetype='  || tcPayrolltimetype )
+
+	/* Added by XXX Starts */
+
+	if (tcMEASURE <> 0) then (
+		wk_hrs_total_day  = wk_hrs_total_day + tcMEASURE
+		wk_hrs_total_tc   =  wk_hrs_total_tc + tcMEASURE
+		rLog  = add_rlog (ffs_id, rule_id, ' >>> Start bulk process - wk_hrs_total_day=' || TO_CHAR( wk_hrs_total_day )  )
+		rLog  = add_rlog (ffs_id, rule_id, ' >>> Start bulk process - wk_hrs_total_tc=' || TO_CHAR( wk_hrs_total_tc )  )
+
+		rLog  = add_rlog (ffs_id, rule_id, ' >>> Start bulk process - l_date=' || TO_CHAR( l_date )  )
+		l_value =                 ('XXX_OTL_CALENDAR_EVENT_DATE_VS', 
+                                 '|=P_DATE='''||to_char(l_date,'YYYY/MM/DD')||'''')
+		rLog  = add_rlog (ffs_id, rule_id, ' >>> Start bulk process - l_value=' || l_value  )
+		if (isnull(l_value) = 'Y') then
+		(
+			l_value = substr(l_value, 1, 2)
+			rLog  = add_rlog (ffs_id, rule_id, ' >>> Start bulk process - l_value=' || l_value  )
+			if (l_value = 'CL') then
+			(
+				l_valid = 'Y'
+				rLog  = add_rlog (ffs_id, rule_id, ' >>> Start bulk process - l_valid=' || l_valid  )
+			)
+			else
+			(
+				l_valid = 'N'
+				rLog  = add_rlog (ffs_id, rule_id, ' >>> Start bulk process - l_valid=' || l_valid  )
+			)
+		)
+		else
+		(
+			l_valid = 'N'
+			rLog  = add_rlog (ffs_id, rule_id, ' >>> Start bulk process - l_valid=' || l_valid  )
+		)
+	)
+	else
+	(
+		l_valid = 'N'
+		rLog  = add_rlog (ffs_id, rule_id, ' >>> Start bulk process - l_valid=' || l_valid  )
+	)
+
+	if (tcRecPos = RecPositoinEoDay ) then (
+		wk_hrs_total_day  = 0
+		l_Date = ADD_DAYS(l_date, 1)
+		l_valid = 'N'
+	) else if (tcRecPos = RecPositoinEoPeriod ) then (
+		wk_hrs_total_day  = 0
+		wk_hrs_total_tc   =  0
+		l_Date = ADD_DAYS(l_date, 1)
+		l_valid = 'N'
+	)
+
+ocMsg1 = NullText
+ocMsg2 = NullText
+
+if (l_essential_flag = 'Y' and l_valid = 'Y') then
+(
+	l_wrn_msg_1 = 'XXX_TL_CL_ESS_MSG_CD'
+	ocMsg1 = get_output_msg ( 'HXT' ,l_wrn_msg_1 )
+	rLog  = add_rlog (ffs_id, rule_id, ' >>> Start bulk process - ocMsg1=' || ocMsg1  )
+	rLog  = add_rlog (ffs_id, rule_id, ' >>> Start bulk process - l_valid1=' || l_valid  )
+)
+if (l_essential_flag = 'N' and l_valid = 'Y') then
+(
+	l_wrn_msg_2 = 'XXX_TL_CL_NON_ESS_MSG_CD'
+	ocMsg2 = get_output_msg ( 'HXT' ,l_wrn_msg_2 )
+	rLog  = add_rlog (ffs_id, rule_id, ' >>> Start bulk process - ocMsg2=' || ocMsg2  )
+	rLog  = add_rlog (ffs_id, rule_id, ' >>> Start bulk process - l_valid2=' || l_valid  )
+)
+rLog  = add_rlog (ffs_id, rule_id, ' >>> Start bulk process - ocMsg1=' || ocMsg1  )
+rLog  = add_rlog (ffs_id, rule_id, ' >>> Start bulk process - ocMsg2=' || ocMsg2  )
+if (ocMsg1 <> NullText) Then 
+(
+	OUT_WRN_MSG_ESS[nidx]   = ocMsg1
+)
+if (ocMsg2 <> NullText) Then 
+(
+	OUT_WRN_MSG_NON_ESS[nidx]   = ocMsg2
+)
+
+	/*Added by XXX Ends*/
+
+	if (nidx >  1000 ) Then (
+		/* endless loop?  Stop process if more than max_loop records found */
+		ex = raise_error (ffs_id, rule_id, 'Formula ' || ffName || ' terminated due to possible end-less loop.' )
+	)
+)
+	rLog  = add_rlog (ffs_id, rule_id, '-- end bulk process <<<<' )
+
+RETURN  OUT_WRN_MSG_ESS, OUT_WRN_MSG_NON_ESS
