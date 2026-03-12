@@ -123,7 +123,7 @@ WHILE (nidx < max_ary ) LOOP
 		rLog  = add_rlog (ffs_id, rule_id, ' >>> Start bulk process - wk_hrs_total_tc=' || TO_CHAR( wk_hrs_total_tc )  )
 
 		rLog  = add_rlog (ffs_id, rule_id, ' >>> Start bulk process - l_date=' || TO_CHAR( l_date )  )
-		l_value =                 ('XXX_OTL_CALENDAR_EVENT_DATE_VS', 
+		l_value =  get_value_set('XXX_OTL_CALENDAR_EVENT_DATE_VS', 
                                  '|=P_DATE='''||to_char(l_date,'YYYY/MM/DD')||'''')
 		rLog  = add_rlog (ffs_id, rule_id, ' >>> Start bulk process - l_value=' || l_value  )
 		if (isnull(l_value) = 'Y') then
